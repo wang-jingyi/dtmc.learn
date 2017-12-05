@@ -141,20 +141,22 @@ public class MetricComputing {
 	public static int calculateMinFreq(RealMatrix frequencyMatrix){
 
 		int nodeNumber = frequencyMatrix.getRowDimension();
-		double[] rowsums = new double[nodeNumber];
+		List<Integer> rowsums = new ArrayList<Integer>();
 		for(int i=0; i<nodeNumber; i++){
 			int rowsum = 0;
 			double[] row = frequencyMatrix.getRow(i);
 			for(int j=0; j<nodeNumber; j++){
 				rowsum += row[j];
 			}
-			rowsums[i] = rowsum;
+			rowsums.add(rowsum);
 		} 
-
+		
+		System.out.println("--- number of visits for each state: " + rowsums);
+		
 		double minFreq = Integer.MAX_VALUE;
-		for(int i=0; i<rowsums.length; i++){
-			if(rowsums[i]<minFreq){
-				minFreq = rowsums[i];
+		for(int i=0; i<rowsums.size(); i++){
+			if(rowsums.get(i)<minFreq){
+				minFreq = rowsums.get(i);
 				continue;
 			}
 		}

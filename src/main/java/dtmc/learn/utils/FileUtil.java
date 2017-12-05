@@ -12,7 +12,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FileUtil {
-	
+
+	public static void deleteFile(String file_path){
+		try {  
+			// Specify the file name and path  
+			File file = new File(file_path);  
+			/* the delete() method return true if the file 
+		      deleted successfully else it return false 
+			 */  
+			if (file.delete()) {
+				return;
+			}   
+		} catch (Exception e) {  
+			e.printStackTrace();  
+		}  
+	}
+
 	public static void cleanDirectory(String path){
 		File dir = new File(path);
 		if(!dir.exists()){
@@ -49,7 +64,7 @@ public class FileUtil {
 	}
 
 	public static void writeStringToFile(String filepath, String str) throws FileNotFoundException{
-		
+
 		File file =new File(filepath);
 
 		//if file doesnt exists, then create it
@@ -61,7 +76,7 @@ public class FileUtil {
 				e.printStackTrace();
 			}
 		}
-		
+
 		PrintWriter out = new PrintWriter(filepath);
 		out.println(str);
 		out.close();

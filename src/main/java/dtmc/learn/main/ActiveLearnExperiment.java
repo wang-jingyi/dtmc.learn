@@ -1,4 +1,4 @@
-package dtmc.learn.active;
+package dtmc.learn.main;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -9,18 +9,18 @@ import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.random.MersenneTwister;
 
+import dtmc.learn.active.IDO;
 import dtmc.learn.estimator.LaplaceEstimator;
-import dtmc.learn.main.Config;
-import dtmc.learn.main.Experiment;
-import dtmc.learn.main.ExperimentResult;
-import dtmc.learn.main.MarkovChain;
-import dtmc.learn.main.MetricComputing;
 import dtmc.learn.models.Model;
+import dtmc.learn.utils.FileUtil;
 
 public class ActiveLearnExperiment implements Experiment{
 
 	public ExperimentResult runExperiment(Config config)
 			throws FileNotFoundException, ClassNotFoundException, IOException {
+		
+		// clean the gurobi log
+		FileUtil.deleteFile(System.getProperty("user.dir")+"/optimize.initial.distribution.log");
 
 		Model model = config.getModel();
 		MarkovChain mc = config.buildMarkovChain();
@@ -29,12 +29,21 @@ public class ActiveLearnExperiment implements Experiment{
 		int more_sample_size = config.getMore_sample_size();
 		int reach_bounded_step = config.getReach_bounded_step();
 		List<Integer> init_states = getValidInitialStates(model);
+		List<Double> init_states_probs = new ArrayList<Double>();
+		for(int i=0; i<mc.getInit_dist().getDimension(); i++){
+			if(mc.getInit_dist().getEntry(i)>0)
+				init_states_probs.add(mc.getInit_dist().getEntry(i));
+		}
 		List<Integer> target_states = model.getTarget_states();
-
+		
+		Reachability actual_reach = new Reachability(mc.getTransitionMatrix(), init_states, init_states_probs, target_states,
+				System.getProperty("user.dir")+"/resources/tmp/reach/"+model.getModel_name(), model.getModel_name()+"_actual", reach_bounded_step);
+		List<Double> target_states_reach = actual_reach.computeReachability();
+		
 		// get an initial estimate
 		RealMatrix stats_matrix = mc.simulate(init_sample_size, sample_length);
 		RealMatrix est_matrix = new LaplaceEstimator().estimate(stats_matrix);
-
+		MarkovChain learned_mc = new MarkovChain(mc.getNodeNumber(), mc.getInit_dist(), est_matrix);
 
 		// compute optimal initial distribution
 		boolean stopping = false;
@@ -53,11 +62,12 @@ public class ActiveLearnExperiment implements Experiment{
 		est_matrix = new LaplaceEstimator().estimate(stats_matrix);
 		int min_visit = MetricComputing.calculateMinFreq(stats_matrix);
 		double mse = MetricComputing.calculateMSE(mc.getTransitionMatrix(), est_matrix);
-		List<Double> target_states_reach = new ArrayList<Double>();
-		for(int ts : target_states){
-			target_states_reach.add(mc.computeBoundedReachability(reach_bounded_step, ts));
-		}
-		ExperimentResult er = new ExperimentResult(min_visit, mse, target_states, target_states_reach);
+		
+		Reachability active_learned_reach = new Reachability(learned_mc.getTransitionMatrix(), init_states, init_states_probs, target_states,
+				System.getProperty("user.dir")+"/resources/tmp/active_learned_reach/"+model.getModel_name(), model.getModel_name()+"_actual", reach_bounded_step);
+		List<Double> active_learned_target_states_reach = active_learned_reach.computeReachability();
+		
+		ExperimentResult er = new ExperimentResult(min_visit, mse, target_states, target_states_reach, active_learned_target_states_reach);
 		System.out.println(config);
 		System.out.println(er);
 		return er;
@@ -109,17 +119,4 @@ public class ActiveLearnExperiment implements Experiment{
 		return min_fre_state;
 	}
 	
-	public static void main(String[] args) throws FileNotFoundException, ClassNotFoundException, IOException{
-		String model_name = "example";
-		int sample_length = 8;
-		int init_sample_size = 1000;
-		int more_sample_size = 1000;
-		int reach_bounded_step = 8;
-		
-		Config config = new Config(model_name, sample_length, init_sample_size, more_sample_size, reach_bounded_step);
-		ActiveLearnExperiment active_exp = new ActiveLearnExperiment();
-		active_exp.runExperiment(config);
-		
-	}
-
 }

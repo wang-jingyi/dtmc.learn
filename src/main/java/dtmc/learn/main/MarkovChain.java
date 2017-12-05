@@ -76,8 +76,6 @@ public class MarkovChain {
 			}
 			visits.addToEntry(path.get(path_length-1), 1);
 		}
-		
-		System.out.println("visits of each state: " + visits);
 		return frequency_matrix;
 	}
 
@@ -233,7 +231,6 @@ public class MarkovChain {
 			adapted_matrix = adapted_matrix.multiply(adapted_matrix_copy);
 		}
 		RealVector reach = adapted_matrix.preMultiply(init_dist);
-		
 		return reach.getEntry(target_state);
 	}
 	
@@ -247,6 +244,8 @@ public class MarkovChain {
 		adapted_matrix.setEntry(target_state, target_state, 1);
 		return adapted_matrix;
 	}
-	
-	
+
+	public RealVector getInit_dist() {
+		return init_dist;
+	}
 }
