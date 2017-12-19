@@ -1,0 +1,17 @@
+P=? [ true U<=15 s=3 ];
+P=? [ true U<=15 s=5 ];
+P=? [ true U<=15 s=7 ];
+P=? [ true U<=15 s=9 ];
+P=? [ true U<=15 s=11 ];
+P=? [ true U<=15 s=13 ];
+P=? [ true U<=15 s=15 ];
+P=? [ true U<=15 s=17 ];
+P=? [ true U<=15 s=19 ];
+P=? [ true U<=15 s=21 ];
+P=? [ true U<=15 s=23 ];
+P=? [ true U<=15 s=25 ];
+P=? [ true U<=15 s=27 ];
+P=? [ true U<=15 s=29 ];
+P=? [ true U<=15 s=31 ];
+P=? [ true U<=15 s=32 ];
+

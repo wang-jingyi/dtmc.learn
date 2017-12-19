@@ -68,4 +68,17 @@ public class MarkovChainUtil {
 		return bound_matrix;
 	}
 	
+	public static RealMatrix sinkTarget(RealMatrix orig_matrix, int target){
+		RealMatrix sinked_matrix = orig_matrix.copy();
+		int matrix_size = orig_matrix.getColumnDimension();
+		for(int i=0; i<matrix_size; i++){
+			if(i==target){
+				sinked_matrix.setEntry(target, i, 1);
+				continue;
+			}
+			sinked_matrix.setEntry(target, i, 0);
+		}
+		return sinked_matrix;
+	}
+	
 }

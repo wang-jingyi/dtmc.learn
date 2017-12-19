@@ -1,6 +1,7 @@
 package dtmc.learn.main;
 
 import java.io.FileNotFoundException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,8 +11,12 @@ import dtmc.learn.utils.ExternalCaller;
 import dtmc.learn.utils.FileUtil;
 import dtmc.learn.utils.PrismUtil;
 
-public class Reachability {
+public class Reachability implements Serializable{
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -5070578427041974719L;
 	private static String prism_path = "/Users/jingyi/prism-4.3-osx64/bin/prism";
 	private RealMatrix transitionMatrix;
 	private List<Integer> initialStates;
@@ -47,6 +52,10 @@ public class Reachability {
 		FileUtil.createDir(dirPath);
 		PrismUtil.MCToPrism(transitionMatrix.getData(), initialStates, initDist, fileName, dirPath);
 		PrismUtil.WritePropertyList(targetStates, dirPath, fileName, transitionMatrix.getRowDimension(), boundedStep);
+	}
+
+	public void setBoundedStep(int boundedStep) {
+		this.boundedStep = boundedStep;
 	}
 
 	public double computeReachability(int i){

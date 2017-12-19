@@ -5,8 +5,10 @@ import java.util.HashSet;
 import java.util.List;
 
 import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.OpenMapRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
+import org.apache.commons.math3.linear.SparseRealMatrix;
 
 import gurobi.GRB;
 import gurobi.GRBEnv;
@@ -27,6 +29,10 @@ public class IDO {
 		this.sample_length = sample_length;
 	}
 
+	/**
+	 * @param valid_init_states all the valid initial states
+	 * @return the optimal initial distribution
+	 */
 	public RealVector computeOptimalInitialDistribution(List<Integer> valid_init_states){
 
 		int nodeNumber = current_estimation.getRowDimension();
@@ -36,7 +42,6 @@ public class IDO {
 		RealMatrix AT = A.transpose();
 
 		double[] ATI = AT.getRow(target); // the i-th row
-
 		double[] optimalDistribution = new double[nodeNumber];
 
 		GRBEnv env;
@@ -63,8 +68,7 @@ public class IDO {
 			// set objective
 			model.setObjective(obj, GRB.MAXIMIZE);
 
-			//		System.out.println(model.getObjective());
-
+			// System.out.println(model.getObjective());
 
 			// add constraints
 			model.addConstr(cst, GRB.EQUAL, 1.0, "valid distribution");
@@ -102,15 +106,28 @@ public class IDO {
 	}
 
 	/**
-	 * @param step	step
-	 * @param estimation transition matrix
-	 * @return the accumulated matrix of given step
+	 * @param l the length of the path samples
+	 * @param origEstimation the current estimation
+	 * @return the accumulated matrix A
 	 */
-	private RealMatrix accumulatedMatrix(int step, RealMatrix estimation){
-		RealMatrix accmulated_matrix = estimation.copy();
-		for(int i=0; i<step; i++){
-			accmulated_matrix = accmulated_matrix.multiply(estimation);
+	public RealMatrix accumulatedMatrix(int l, RealMatrix origEstimation){
+		int nodeNumber = origEstimation.getRowDimension();
+		RealMatrix identity_matrix = null;
+		
+		if(origEstimation instanceof SparseRealMatrix){
+			identity_matrix = new OpenMapRealMatrix(nodeNumber, nodeNumber);
 		}
-		return accmulated_matrix;
+		else{
+			identity_matrix = MatrixUtils.createRealIdentityMatrix(nodeNumber);
+		}
+		
+		RealMatrix estimationMatrix = origEstimation.copy(); // 
+		RealMatrix multipliedMatrix = origEstimation.copy(); //
+		RealMatrix accumulatedMatrix = identity_matrix.add(estimationMatrix);
+		for(int i=2; i<=l-1; i++){
+			multipliedMatrix = multipliedMatrix.multiply(estimationMatrix);
+			accumulatedMatrix = accumulatedMatrix.add(multipliedMatrix); 
+		}
+		return accumulatedMatrix;
 	}
 }

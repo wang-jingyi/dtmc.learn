@@ -15,12 +15,13 @@ public class Example {
 		
 		// example
 		double[][] example_matrix = new double[][]{
-			{0.99,0.001,0.009,0},
+			{0.99,0.009,0.001,0},
 			{0,0,0.05,0.95},
 			{0,0,0,1},
 			{0,0,0,1}
+			
 		};
-		double[] example_id = new double[]{0.999,0.001,0,0};
+		double[] example_id = new double[]{0.9,0.1,0,0};
 		List<Integer> example_ts = new ArrayList<Integer>();
 		example_ts.add(3);
 		
@@ -28,6 +29,7 @@ public class Example {
 		RealMatrix example_transition_matrix = MatrixUtils.createRealMatrix(example_matrix);
 		Model example_model = new Model("example", example_transition_matrix, example_init_dist, example_ts);
 		example_model.saveModel();
+		System.out.println("=== model saved to file ===");
 		
 	}
 

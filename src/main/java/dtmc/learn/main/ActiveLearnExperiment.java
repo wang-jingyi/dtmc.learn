@@ -3,23 +3,37 @@ package dtmc.learn.main;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
-import org.apache.commons.math3.random.MersenneTwister;
 
 import dtmc.learn.active.IDO;
-import dtmc.learn.estimator.LaplaceEstimator;
+import dtmc.learn.estimator.Estimator;
 import dtmc.learn.models.Model;
 import dtmc.learn.utils.FileUtil;
+import dtmc.learn.utils.RandomUtil;
 
 public class ActiveLearnExperiment implements Experiment{
 
-	public ExperimentResult runExperiment(Config config)
+	int batch_size = 100;
+	int top_n_small = 10;
+
+	public ActiveLearnExperiment(int batch_size, int top_n_small) {
+		this.batch_size = batch_size;
+		this.top_n_small = top_n_small;
+	}
+
+	public ActiveLearnExperiment() {
+	}
+
+	public ExperimentResult runExperiment(Config config, Estimator estimator)
 			throws FileNotFoundException, ClassNotFoundException, IOException {
-		
-		// clean the gurobi log
+
+		// clean the gurobi log, it's really large file if not cleaned
 		FileUtil.deleteFile(System.getProperty("user.dir")+"/optimize.initial.distribution.log");
 
 		Model model = config.getModel();
@@ -35,43 +49,68 @@ public class ActiveLearnExperiment implements Experiment{
 				init_states_probs.add(mc.getInit_dist().getEntry(i));
 		}
 		List<Integer> target_states = model.getTarget_states();
-		
+
 		Reachability actual_reach = new Reachability(mc.getTransitionMatrix(), init_states, init_states_probs, target_states,
 				System.getProperty("user.dir")+"/resources/tmp/reach/"+model.getModel_name(), model.getModel_name()+"_actual", reach_bounded_step);
 		List<Double> target_states_reach = actual_reach.computeReachability();
-		
+		FileUtil.writeObject(GlobalConfigs.TMP_PATH+"/reach/"+model.getModel_name()+"/actual_reach", actual_reach);
+
 		// get an initial estimate
 		RealMatrix stats_matrix = mc.simulate(init_sample_size, sample_length);
-		RealMatrix est_matrix = new LaplaceEstimator().estimate(stats_matrix);
-		MarkovChain learned_mc = new MarkovChain(mc.getNodeNumber(), mc.getInit_dist(), est_matrix);
+		RealMatrix est_matrix = estimator.estimate(stats_matrix);
 
-		// compute optimal initial distribution
+		// max min
 		boolean stopping = false;
-		int iter = 0;
+		int total_sample = 0;
+		RealMatrix trans_stats_matrix = stats_matrix.copy();
+		RealMatrix trans_est_matrix = est_matrix.copy();
 		while(!stopping){
-			iter++;
-			int target_optimize_state = getTargetOptimizeState(stats_matrix);
-			IDO ido = new IDO(target_optimize_state, est_matrix, sample_length);
+			total_sample += batch_size;
+			int target_optimize_state = getTargetOptimizeState(trans_stats_matrix, top_n_small);
+			IDO ido = new IDO(target_optimize_state, trans_est_matrix, sample_length);
 			RealVector optimal_init_dist = ido.computeOptimalInitialDistribution(init_states);
-			mc.simulate(optimal_init_dist, stats_matrix, more_sample_size/100, sample_length);
-			if(iter>100){
+			mc.simulate(optimal_init_dist, trans_stats_matrix, batch_size, sample_length);
+			trans_est_matrix = estimator.estimate(trans_stats_matrix);
+			if(total_sample>=more_sample_size){
 				stopping = true;
 			}
 		}
-		
-		est_matrix = new LaplaceEstimator().estimate(stats_matrix);
-		int min_visit = MetricComputing.calculateMinFreq(stats_matrix);
-		double mse = MetricComputing.calculateMSE(mc.getTransitionMatrix(), est_matrix);
-		
-		Reachability active_learned_reach = new Reachability(learned_mc.getTransitionMatrix(), init_states, init_states_probs, target_states,
-				System.getProperty("user.dir")+"/resources/tmp/active_learned_reach/"+model.getModel_name(), model.getModel_name()+"_actual", reach_bounded_step);
+		int min_visit = MetricComputing.calculateMinFreq(trans_stats_matrix);
+		double mse = MetricComputing.calculateMSE(mc.getTransitionMatrix(), trans_est_matrix);
+
+		Reachability active_learned_reach = new Reachability(trans_est_matrix, init_states, init_states_probs, target_states,
+				System.getProperty("user.dir")+"/resources/tmp/active_learned_reach/"+model.getModel_name(), model.getModel_name()+"_reach", reach_bounded_step);
 		List<Double> active_learned_target_states_reach = active_learned_reach.computeReachability();
-		
-		ExperimentResult er = new ExperimentResult(min_visit, mse, target_states, target_states_reach, active_learned_target_states_reach);
+		FileUtil.writeObject(System.getProperty("user.dir")+"/resources/tmp/active_learned_reach/"+model.getModel_name()+"/active_reach", active_learned_reach);
+
+		// max reach
+		stopping = false;
+		total_sample = 0;
+		RealMatrix reach_stats_matrix = stats_matrix.copy();
+		RealMatrix reach_est_matrix = est_matrix.copy();
+		while(!stopping){
+			total_sample += batch_size;
+			int target_optimize_state = getReachOptimizeState(target_states); 
+			IDO ido = new IDO(target_optimize_state, reach_est_matrix, sample_length);
+			RealVector optimal_init_dist = ido.computeOptimalInitialDistribution(init_states);
+			mc.simulate(optimal_init_dist, reach_stats_matrix, batch_size, sample_length);
+			reach_est_matrix = estimator.estimate(reach_stats_matrix);
+			if(total_sample>=more_sample_size){
+				stopping = true;
+			}
+		}
+
+		Reachability active_learned_reach_2 = new Reachability(reach_est_matrix, init_states, init_states_probs, target_states,
+				System.getProperty("user.dir")+"/resources/tmp/active_learned_reach_2/"+model.getModel_name(), model.getModel_name()+"_reach_2", reach_bounded_step);
+		List<Double> active_learned_target_states_reach_2 = active_learned_reach_2.computeReachability();
+		FileUtil.writeObject(System.getProperty("user.dir")+"/resources/tmp/active_learned_reach_2/"+model.getModel_name()+"/active_reach_2", active_learned_reach_2);
+
+		ExperimentResult er = new ExperimentResult(min_visit, mse, target_states, target_states_reach, 
+				active_learned_target_states_reach, active_learned_target_states_reach_2);
 		System.out.println(config);
 		System.out.println(er);
 		return er;
-		
+
 	}
 
 	private List<Integer> getValidInitialStates(Model model){
@@ -85,38 +124,26 @@ public class ActiveLearnExperiment implements Experiment{
 		return init_states;
 	}
 
-	private int getTargetOptimizeState(RealMatrix stats_matrix){
+	private int getReachOptimizeState(List<Integer> target_states){
+		int i = RandomUtil.nextInt(0, target_states.size()-1);
+		return target_states.get(i);
+	}
+
+	private int getTargetOptimizeState(RealMatrix stats_matrix, int top_n_min){
 		int node_number = stats_matrix.getRowDimension();
-		double[] row_sums = new double[node_number];
+		List<Integer> row_sums = new ArrayList<>();
+		Map<Integer, Integer> row_sum_map = new HashMap<>();
 		for(int i=0; i<node_number; i++){
 			int row_sum = 0;
 			for(int j=0; j<node_number; j++){
 				row_sum += stats_matrix.getEntry(i, j);
 			}
-			row_sums[i] = row_sum;
+			row_sum_map.put(row_sum, i);
+			row_sums.add(row_sum);
 		} 
-
-		int min_fre_state = 0;
-		double min_non_zero_row_sum = Double.MAX_VALUE;
-		for(int i=0; i<row_sums.length; i++){
-			if(row_sums[i]<min_non_zero_row_sum 
-					&& row_sums[i]!=0
-					){ // only those states 
-				min_fre_state = i;
-				min_non_zero_row_sum = row_sums[i];
-			}
-		}
-
-		List<Integer> mins = new ArrayList<Integer>();
-		for(int i=0; i<node_number; i++){
-			if(row_sums[i]==row_sums[min_fre_state]){
-				mins.add(i);
-			}
-		}
-		int minsSize = mins.size();
-		min_fre_state = mins.get(new MersenneTwister().nextInt(minsSize));
-		
-		return min_fre_state;
+		Collections.sort(row_sums);
+		int target_state = row_sum_map.get(row_sums.get(RandomUtil.nextInt(0, top_n_min-1))); 
+		return target_state;
 	}
-	
+
 }

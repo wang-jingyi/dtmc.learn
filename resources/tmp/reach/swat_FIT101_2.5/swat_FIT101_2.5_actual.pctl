@@ -1,0 +1,12 @@
+P=? [ true U<=8 s=2 ];
+P=? [ true U<=8 s=4 ];
+P=? [ true U<=8 s=6 ];
+P=? [ true U<=8 s=8 ];
+P=? [ true U<=8 s=10 ];
+P=? [ true U<=8 s=12 ];
+P=? [ true U<=8 s=14 ];
+P=? [ true U<=8 s=16 ];
+P=? [ true U<=8 s=18 ];
+P=? [ true U<=8 s=20 ];
+P=? [ true U<=8 s=21 ];
+

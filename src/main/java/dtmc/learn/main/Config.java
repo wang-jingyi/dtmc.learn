@@ -24,6 +24,21 @@ public class Config {
 		this.model = (Model) FileUtil.readObject("/Users/jingyi/Documents/workspace/dtmc.learn/src/main/resources/models/"+model_name);
 	}
 	
+	public Config(String model_name, int sample_length, int init_sample_size, int more_sample_size) throws FileNotFoundException, ClassNotFoundException, IOException {
+		this.model_name = model_name;
+		this.sample_length = sample_length;
+		this.init_sample_size = init_sample_size;
+		this.more_sample_size = more_sample_size;
+		this.model = (Model) FileUtil.readObject("/Users/jingyi/Documents/workspace/dtmc.learn/src/main/resources/models/"+model_name);
+		if(model.getInit_dist().getDimension()>100){
+			this.reach_bounded_step = model.getInit_dist().getDimension()/8;
+		}
+		else if(model.getInit_dist().getDimension()<10){
+			this.reach_bounded_step = model.getInit_dist().getDimension()/2;
+		}
+		this.reach_bounded_step = model.getInit_dist().getDimension()/4;
+	}
+	
 	@Override
 	public String toString() {
 		return "Config [model_name=" + model_name + ", sample_length=" + sample_length + ", init_sample_size="

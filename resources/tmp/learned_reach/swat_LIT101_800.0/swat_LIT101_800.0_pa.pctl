@@ -1,0 +1,10 @@
+P=? [ true U<=16 s=2 ];
+P=? [ true U<=16 s=5 ];
+P=? [ true U<=16 s=8 ];
+P=? [ true U<=16 s=11 ];
+P=? [ true U<=16 s=14 ];
+P=? [ true U<=16 s=17 ];
+P=? [ true U<=16 s=20 ];
+P=? [ true U<=16 s=23 ];
+P=? [ true U<=16 s=24 ];
+

@@ -26,14 +26,24 @@ public class QueueModel {
 			{0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0.61 , 0 , 0.39},
 			{0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 1 , 0}
 		};
-		double[] queue_id = new double[]{0.99,0.01,0,0};
+		double[] queue_id = new double[queue_matrix.length];
+		for(int i=0; i<5; i++){
+			queue_id[i] = (double)1/5;
+		}
+		
 		List<Integer> queue_ts = new ArrayList<Integer>();
-		queue_ts.add(3);
+//		for(int i=5; i<queue_matrix.length; i++){
+//			queue_ts.add(i);
+//		}
+		queue_ts.add(8);
+		queue_ts.add(9);
+		queue_ts.add(10);
 
 		RealVector queue_init_dist = MatrixUtils.createRealVector(queue_id);
 		RealMatrix queue_transition_matrix = MatrixUtils.createRealMatrix(queue_matrix);
 		Model queue_model = new Model("queue", queue_transition_matrix, queue_init_dist, queue_ts);
 		queue_model.saveModel();
+		System.out.println("=== model saved to file ===");
 
 	}
 }

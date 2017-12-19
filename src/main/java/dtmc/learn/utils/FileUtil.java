@@ -39,6 +39,7 @@ public class FileUtil {
 	}
 
 	public static void writeObject(String fileName, Object obj) throws FileNotFoundException, IOException{
+		
 		ObjectOutputStream objectOutputStream = new ObjectOutputStream(
 				new FileOutputStream(fileName));
 		objectOutputStream.writeObject(obj);
